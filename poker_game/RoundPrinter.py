@@ -18,20 +18,28 @@ class RoundPrinter:
     moves: List[MoveDetails]
     player_hands: Dict[int, List[int]]
 
-    def __init__(self, player_hands: Dict[int, List[int]]):
+    enabled: bool
+
+    def __init__(self, player_hands: Dict[int, List[int]], enabled: bool):
         self.player_ids = []
         self.pots = []
         self.stacks = []
         self.moves = []
         self.player_hands = player_hands
+
+        self.enabled = enabled
     
     def write_round(self, player_id:int, stack:int, pot:int, move_details:MoveDetails):
+        if not self.enabled:
+            return
         self.player_ids.append(player_id)
         self.pots.append(pot)
         self.stacks.append(stack)
         self.moves.append(move_details)
 
     def print_round(self, round_num:int, board:List[int]):
+        if not self.enabled:
+            return
 
         print(f"=========================")
         print(f" {round_names[round_num]}")
@@ -42,17 +50,21 @@ class RoundPrinter:
             player_id = self.player_ids[i]
             player_hand = Card.ints_to_pretty_str(self.player_hands[player_id])
             player_str = f"Player {self.player_ids[i]} with{player_hand}{self.moves[i].move.value}s"
+            pot_str = f"The pot is {self.pots[i]}."
             if self.moves[i].move == Move.FOLD:
-                print(f"{player_str}. Their stack is {self.stacks[i]}.")
+                print(f"{player_str}. {pot_str} Their stack is {self.stacks[i]}.")
             elif self.moves[i].move == Move.CHECK:
-                print(f"{player_str}. Their stack is {self.stacks[i]}.")
+                print(f"{player_str}. {pot_str} Their stack is {self.stacks[i]}.")
             elif self.moves[i].move == Move.CALL:
-                print(f"{player_str} {self.moves[i].call_amount}. The pot is now {self.pots[i]}. Their stack is now {self.stacks[i]}.")
+                print(f"{player_str} {self.moves[i].call_amount}. {pot_str} Their stack is now {self.stacks[i]}.")
             elif self.moves[i].move == Move.RAISE:
-                print(f"{player_str} {self.moves[i].raise_amount}. The pot is now {self.pots[i]}. Their stack is now {self.stacks[i]}.")
+                print(f"{player_str} {self.moves[i].raise_amount}. {pot_str} Their stack is now {self.stacks[i]}.")
 
 
     def print_winners(self, winners: List[Player], board: List[int]):
+        if not self.enabled:
+            return
+
         eval = Evaluator()
         print()
         print("Winners:")

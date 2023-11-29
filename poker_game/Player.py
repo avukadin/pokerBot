@@ -18,12 +18,11 @@ class Player:
         self._stack = stack
 
     def make_move(self, last_raise_amount:int, board:List[int]) -> MoveDetails:
-        assert self.needs_to_play()
 
         moves = self._get_available_moves()
         move = self._select_move(moves, board)
 
-        move_details = MoveDetails(move)
+        move_details = MoveDetails(self.player_id, move)
         if move == Move.RAISE:
             raise_amount = self._get_raise_amount(last_raise_amount)
             assert raise_amount > 0
@@ -50,20 +49,11 @@ class Player:
 
         return move_details
 
-    def needs_to_play(self) -> bool:
-        return (self._stack > 0) and (self._to_call > 0 or self._last_move == Move.NIL) and (self._last_move != Move.FOLD)
-
-    def update_after_opponent_move(self, move_history: MoveDetails):
-        if move_history.move == Move.RAISE:
-            self._to_call += move_history.raise_amount
-            self._to_call = min(self._to_call, self._stack)
-
     def set_new_round_state(self):
-        if self._last_move != Move.FOLD:
-            self._to_call = 0
-            self._last_move = Move.NIL
+        self._to_call = 0
+        self._last_move = Move.NIL
 
-    def set_new_hand_state(self):
+    def prepare_for_new_hand(self):
         self._cards = []
         self._to_call = 0
         self._last_move = Move.NIL
@@ -100,6 +90,28 @@ class Player:
 
         return random.randint(min_raise, max_raise)
 
+    def post_big_blind(self, big_blind: int) -> int:
+        return self.safe_take_from_stack(big_blind)
+
+    def post_small_blind(self, big_blind: int, small_blind: int) -> int:
+        amount = self.safe_take_from_stack(small_blind)
+        self.add_to_call(big_blind-small_blind)
+        return amount
+    
+    def safe_take_from_stack(self, amount: int):
+        assert amount >= 0
+        amount = min(amount, self._stack)
+        self._stack -= amount
+        return amount
+
+    def add_to_call(self, amount: int):
+        assert amount >= 0
+        remaining = self._stack - self._to_call
+        assert remaining>=0
+        amount = min(amount, remaining)
+        self._to_call += amount
+        return amount
+
     # Getters and Setters
     @property
     def stack(self) -> int:
@@ -108,6 +120,7 @@ class Player:
     @stack.setter
     def stack(self, stack: int):
         self._stack = stack
+        assert self._stack >= 0
 
     @property
     def cards(self) -> List[int]:
@@ -131,4 +144,4 @@ class Player:
 
     @to_call.setter
     def to_call(self, to_call: int):
-        self._to_call = to_call
+        self._to_call = min(to_call, self.stack)
