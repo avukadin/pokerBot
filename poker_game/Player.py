@@ -91,11 +91,13 @@ class Player:
         return random.randint(min_raise, max_raise)
 
     def post_big_blind(self, big_blind: int) -> int:
+        self._last_move = Move.RAISE
         return self.safe_take_from_stack(big_blind)
 
     def post_small_blind(self, big_blind: int, small_blind: int) -> int:
         amount = self.safe_take_from_stack(small_blind)
         self.add_to_call(big_blind-small_blind)
+        self._last_move = Move.RAISE
         return amount
     
     def safe_take_from_stack(self, amount: int):

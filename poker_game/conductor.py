@@ -4,7 +4,7 @@ import random
 from .params import START_STACK, BIG_BLIND, SMALL_BLIND
 from typing import List, Dict
 from .types import Move
-from .RoundPrinter import RoundPrinter
+from .RoundPrinter import print_round, print_winners, print_player_move
 from collections import deque
 
 
@@ -27,26 +27,26 @@ def play_next_hand(players: List[Player], to_print:bool) -> List[Player]:
         if i >= 1:
             dealer.deal_board()
 
-        printer = RoundPrinter(player_hands=start_hands, enabled=to_print)
+        print_round(i, dealer.board)
         start_round_players = len(player_queue)
         while len(player_queue) > 0 and start_round_players>1:
             player = dealer.get_next_player_turn(player_queue)
             move_history = player.make_move(dealer.last_raise, dealer.board)
             dealer.add_to_pot(move_history.raise_amount + move_history.call_amount)
-            
-            printer.write_round(player.player_id, player.stack, dealer.pot, move_history)
-            
+             
             if move_history.move == Move.RAISE:
                 dealer.update_after_raise(player_queue, players, move_history)
+
+            print_player_move(player, move_history, dealer.pot, start_hands[player.player_id])
+            dealer.setup_side_pot(player, player_queue, move_history)
  
         dealer.setup_for_next_round(player_queue, players)
-        printer.print_round(i, dealer.board)
+        print(dealer._side_pots)
     
     winners = dealer.determine_winners(players)
     dealer.distribute_pot(winners)
+    print_winners(winners, dealer.board, start_hands)
 
-    printer = RoundPrinter(player_hands=start_hands, enabled=to_print)
-    printer.print_winners(winners, dealer.board)
     remaining_players: List[Player] = [player for player in players if player.stack>0]
 
     return remaining_players

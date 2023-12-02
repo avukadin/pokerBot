@@ -3,14 +3,12 @@ from typing import List, Dict, Optional, Set
 from treys import Deck
 import random
 from .Player import Player
-from .types import Move, MoveDetails
+from .types import Move, MoveDetails, SidePot
 from typing import List
 from treys import Card, Evaluator
 from .pre_flop_rankings import PREFLOP_RANKINGS
 import numpy as np
 from .params import BIG_BLIND, SMALL_BLIND
-from queue import Queue
-
 
 
 class Dealer():
@@ -21,11 +19,14 @@ class Dealer():
 
     _evaluator = Evaluator()
 
+    _side_pots: Dict[int, SidePot]
+
     def __init__(self):
         self._deck = Deck()
         self._board = []
         self._last_raise = 0
         self._pot = 0
+        self._side_pots = {}
 
     def deal_player_cards(self, players:deque[Player]):
         for player in players:
@@ -40,7 +41,7 @@ class Dealer():
             
         amount = players[big_blind].post_big_blind(BIG_BLIND)
         self.add_to_pot(amount)
-
+ 
         for i in range(len(players)):
             if i in [small_blind, big_blind]:
                 continue
@@ -57,6 +58,39 @@ class Dealer():
     def add_to_pot(self, amount: int):
         assert amount >= 0
         self._pot += amount
+
+    def setup_side_pot(self, player: Player, players:deque[Player], move_details: MoveDetails):
+
+        # Check if we need to create a side pot for an opponent
+        if move_details.move == Move.RAISE:
+            for p in players:
+                if p.to_call >= move_details.raise_amount:
+                    # Don't create a side pot for players who have enough to call the raise
+                    continue
+                if p.player_id in self._side_pots:
+                    # Don't create a side pot for players who already have one
+                    continue
+
+                print(f"Creating side pot for player {p.player_id} after {player.player_id} raised") 
+                self._side_pots[p.player_id] = SidePot(
+                    pot=self._pot - move_details.raise_amount+ p.to_call,
+                    contributors={player.player_id},
+                    contribution_size=p.to_call
+                )
+                print(self._side_pots[p.player_id])
+
+        # Check if we need to add to an existing side pot after a call
+        elif move_details.move == Move.CALL:
+            all_players = [player] + list(players)
+            for p in all_players:
+                side_pot = self._side_pots.get(p.player_id)
+                if side_pot and p.player_id not in side_pot.contributors:
+                    side_pot.contributors.add(player.player_id)
+                    side_pot.pot += side_pot.contribution_size
+
+        elif move_details.move == Move.FOLD:
+            if player.player_id in self._side_pots:
+                del self._side_pots[player.player_id]
 
     def determine_winners(self, players: List[Player]) -> List[Player]:
         potential_winners = [player for player in players if player.last_move != Move.FOLD]

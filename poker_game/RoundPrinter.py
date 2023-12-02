@@ -11,65 +11,30 @@ round_names = {
     3: "River"
 }
 
-class RoundPrinter:
-    player_ids: List[int]
-    pots: List[int]
-    stacks: List[int]
-    moves: List[MoveDetails]
-    player_hands: Dict[int, List[int]]
+eval = Evaluator()
 
-    enabled: bool
+def print_player_move(player:Player, move:MoveDetails, pot:int, player_hand:List[int]):
+    player_hand_str = Card.ints_to_pretty_str(player_hand)
+    player_str = f"Player {player.player_id} with{player_hand_str}{move.move.value}s"
+    if move.move in [Move.FOLD, Move.CHECK]:
+        print(f"{player_str}. Their stack is {player.stack}.")
+    elif move.move in [Move.CALL, Move.RAISE]:
+        amount = move.call_amount if move.move == Move.CALL else move.raise_amount
+        print(f"{player_str} {amount}. The pot is now {pot}. Their stack is now {player.stack}.")
 
-    def __init__(self, player_hands: Dict[int, List[int]], enabled: bool):
-        self.player_ids = []
-        self.pots = []
-        self.stacks = []
-        self.moves = []
-        self.player_hands = player_hands
-
-        self.enabled = enabled
-    
-    def write_round(self, player_id:int, stack:int, pot:int, move_details:MoveDetails):
-        if not self.enabled:
-            return
-        self.player_ids.append(player_id)
-        self.pots.append(pot)
-        self.stacks.append(stack)
-        self.moves.append(move_details)
-
-    def print_round(self, round_num:int, board:List[int]):
-        if not self.enabled:
-            return
-
-        print(f"=========================")
-        print(f" {round_names[round_num]}")
-        if round_num > 0:
-            Card.print_pretty_cards(board)
-        print(f"=========================")
-        for i in range(len(self.player_ids)):
-            player_id = self.player_ids[i]
-            player_hand = Card.ints_to_pretty_str(self.player_hands[player_id])
-            player_str = f"Player {self.player_ids[i]} with{player_hand}{self.moves[i].move.value}s"
-            pot_str = f"The pot is {self.pots[i]}."
-            if self.moves[i].move == Move.FOLD:
-                print(f"{player_str}. {pot_str} Their stack is {self.stacks[i]}.")
-            elif self.moves[i].move == Move.CHECK:
-                print(f"{player_str}. {pot_str} Their stack is {self.stacks[i]}.")
-            elif self.moves[i].move == Move.CALL:
-                print(f"{player_str} {self.moves[i].call_amount}. {pot_str} Their stack is now {self.stacks[i]}.")
-            elif self.moves[i].move == Move.RAISE:
-                print(f"{player_str} {self.moves[i].raise_amount}. {pot_str} Their stack is now {self.stacks[i]}.")
+def print_round(round_num:int, board:List[int]):
+    print(f"=========================")
+    print(f" {round_names[round_num]}")
+    if round_num > 0:
+        Card.print_pretty_cards(board)
+    print(f"=========================")
 
 
-    def print_winners(self, winners: List[Player], board: List[int]):
-        if not self.enabled:
-            return
-
-        eval = Evaluator()
-        print()
-        print("Winners:")
-        for winner in winners:
-            hand = self.player_hands[winner.player_id]
-            hand_result = eval.class_to_string(eval.get_rank_class(eval.evaluate(hand, board)))
-            print(f"Player {winner.player_id} with {hand_result} ending with a stack of {winner.stack}")
-        print()
+def print_winners(winners: List[Player], board: List[int], player_hands: Dict[int, List[int]]):
+    print()
+    print("Winners:")
+    for winner in winners:
+        hand = player_hands[winner.player_id]
+        hand_result = eval.class_to_string(eval.get_rank_class(eval.evaluate(hand, board)))
+        print(f"Player {winner.player_id} with {hand_result} ending with a stack of {winner.stack}")
+    print()

@@ -15,3 +15,10 @@ class MoveDetails:
     move: Move
     call_amount: int = 0
     raise_amount: int = 0
+
+
+@dataclass
+class SidePot:
+    pot: int
+    contributors: set[int]
+    contribution_size: int
