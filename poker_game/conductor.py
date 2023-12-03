@@ -60,8 +60,8 @@ def play(min_players: int, max_players: int, games: int):
     assert max_players >= min_players
 
     for i in range(games):
-        print_game_start(i, max_players)
         n_players = random.randint(min_players, max_players)
+        print_game_start(i, n_players)
         players: List[Player] = [Player(i, START_STACK) for i in range(n_players)]
 
         while len(players) >= 2:
