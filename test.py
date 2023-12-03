@@ -1,9 +1,10 @@
 from poker_game.conductor import play
 from time import time
+from poker_game.params import MIN_PLAYERS, MAX_PLAYERS, NUM_GAMES
 
 if __name__ == '__main__':  
     start = time()
-    play(3,6,100, printer=True)
+    play(MIN_PLAYERS, MAX_PLAYERS, NUM_GAMES)
     end = time()
 
     # Print total seconds passed

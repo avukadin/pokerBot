@@ -3,6 +3,7 @@ from .Player import Player
 from .types import MoveDetails, Winner
 from .types import Move
 from treys import Card, Evaluator
+from .params import PRINTER
 
 round_names = {
     0: "Pre-Flop",
@@ -13,7 +14,17 @@ round_names = {
 
 eval = Evaluator()
 
+def print_game_start(game_number:int, n_players:int):
+    if not PRINTER:
+        return
+    print("=========================")
+    print(f"        Game {game_number+1}")
+    print(f"      Players: {n_players}")
+    print("=========================")
+
 def print_player_move(player:Player, move:MoveDetails, pot:int, player_hand:List[int]):
+    if not PRINTER:
+        return
     player_hand_str = Card.ints_to_pretty_str(player_hand)
     player_str = f"Player {player.player_id} with{player_hand_str}{move.move.value}s"
     if move.move in [Move.FOLD, Move.CHECK]:
@@ -25,6 +36,8 @@ def print_player_move(player:Player, move:MoveDetails, pot:int, player_hand:List
         print(f"{player_str} {move.raise_amount}{call_str}. The pot is now {pot}. Their stack is now {player.stack}.")
 
 def print_round(round_num:int, board:List[int]):
+    if not PRINTER:
+        return
     print(f"=========================")
     print(f" {round_names[round_num]}")
     if round_num > 0:
@@ -33,6 +46,8 @@ def print_round(round_num:int, board:List[int]):
 
 
 def print_winners(winners: List[Winner], board: List[int], player_hands: Dict[int, List[int]]):
+    if not PRINTER:
+        return
     print()
     print("Winners:")
     for winner in winners:

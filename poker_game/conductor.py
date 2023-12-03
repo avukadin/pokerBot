@@ -4,11 +4,11 @@ import random
 from .params import START_STACK, BIG_BLIND, SMALL_BLIND
 from typing import List, Dict
 from .types import Move
-from .RoundPrinter import print_round, print_winners, print_player_move
+from .RoundPrinter import print_game_start, print_round, print_winners, print_player_move
 from collections import deque
 
 
-def play_next_hand(players: List[Player], to_print:bool) -> List[Player]:
+def play_next_hand(players: List[Player]) -> List[Player]:
     # Plays a full hand of poker
     start_amount = sum([player.stack for player in players])
 
@@ -35,7 +35,8 @@ def play_next_hand(players: List[Player], to_print:bool) -> List[Player]:
             move_history = player.make_move(
                 dealer.last_raise,
                 dealer.max_opponent_stack(player_queue),
-                dealer.board)
+                dealer.board
+            )
             dealer.add_to_pot(move_history.raise_amount + move_history.call_amount)
              
             if move_history.move == Move.RAISE:
@@ -54,21 +55,15 @@ def play_next_hand(players: List[Player], to_print:bool) -> List[Player]:
     assert start_amount == end_amount, f"Start amount: {start_amount}, end amount: {end_amount}"
     return remaining_players
     
-def play(min_players: int, max_players: int, games: int, printer: bool = True):
+def play(min_players: int, max_players: int, games: int):
     assert min_players > 1
     assert max_players >= min_players
 
     for i in range(games):
+        print_game_start(i, max_players)
         n_players = random.randint(min_players, max_players)
-
-        if printer:
-            print("=========================")
-            print(f"        Game {i+1}")
-            print(f"      Players: {n_players}")
-            print("=========================")
-
         players: List[Player] = [Player(i, START_STACK) for i in range(n_players)]
 
         while len(players) >= 2:
-            players = play_next_hand(players, printer)
+            players = play_next_hand(players)
 
