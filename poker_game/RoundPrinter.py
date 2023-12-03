@@ -1,6 +1,6 @@
 from typing import List, Dict
 from .Player import Player
-from .types import MoveDetails
+from .types import MoveDetails, Winner
 from .types import Move
 from treys import Card, Evaluator
 
@@ -17,10 +17,12 @@ def print_player_move(player:Player, move:MoveDetails, pot:int, player_hand:List
     player_hand_str = Card.ints_to_pretty_str(player_hand)
     player_str = f"Player {player.player_id} with{player_hand_str}{move.move.value}s"
     if move.move in [Move.FOLD, Move.CHECK]:
-        print(f"{player_str}. Their stack is {player.stack}.")
+        print(f"{player_str} Their stack is {player.stack}.")
+    elif move.move == Move.CALL:
+        print(f"{player_str} {move.call_amount}. The pot is now {pot}. Their stack is now {player.stack}.")
     elif move.move in [Move.CALL, Move.RAISE]:
-        amount = move.call_amount if move.move == Move.CALL else move.raise_amount
-        print(f"{player_str} {amount}. The pot is now {pot}. Their stack is now {player.stack}.")
+        call_str = f" and calls {move.call_amount}" if move.call_amount > 0 else ""
+        print(f"{player_str} {move.raise_amount}{call_str}. The pot is now {pot}. Their stack is now {player.stack}.")
 
 def print_round(round_num:int, board:List[int]):
     print(f"=========================")
@@ -30,11 +32,11 @@ def print_round(round_num:int, board:List[int]):
     print(f"=========================")
 
 
-def print_winners(winners: List[Player], board: List[int], player_hands: Dict[int, List[int]]):
+def print_winners(winners: List[Winner], board: List[int], player_hands: Dict[int, List[int]]):
     print()
     print("Winners:")
     for winner in winners:
         hand = player_hands[winner.player_id]
         hand_result = eval.class_to_string(eval.get_rank_class(eval.evaluate(hand, board)))
-        print(f"Player {winner.player_id} with {hand_result} ending with a stack of {winner.stack}")
+        print(f"Player {winner.player_id} won {winner.win_amount} with {hand_result}, ending with a stack of {winner.end_stack}")
     print()

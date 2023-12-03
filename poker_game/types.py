@@ -16,9 +16,8 @@ class MoveDetails:
     call_amount: int = 0
     raise_amount: int = 0
 
-
 @dataclass
-class SidePot:
-    pot: int
-    contributors: set[int]
-    contribution_size: int
+class Winner:
+    player_id: int
+    win_amount: int
+    end_stack: int

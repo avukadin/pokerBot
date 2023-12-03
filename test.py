@@ -3,7 +3,7 @@ from time import time
 
 if __name__ == '__main__':  
     start = time()
-    play(3,6,10, printer=True)
+    play(3,6,100, printer=True)
     end = time()
 
     # Print total seconds passed

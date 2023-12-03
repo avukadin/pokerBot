@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 from .params import BIG_BLIND
 from .types import Move, MoveDetails
 import random
@@ -7,6 +7,7 @@ class Player:
     player_id: int
 
     _stack: int
+    _chips_in_pot: int = 0
     _cards: List[int] = []
     _last_move: Move = Move.NIL
     _to_call: int = 0
@@ -17,14 +18,14 @@ class Player:
         self.player_id = player_id
         self._stack = stack
 
-    def make_move(self, last_raise_amount:int, board:List[int]) -> MoveDetails:
+    def make_move(self, last_raise_amount:int, max_opponent_stack:int, board:List[int]) -> MoveDetails:
 
-        moves = self._get_available_moves()
+        moves = self._get_available_moves(max_opponent_stack)
         move = self._select_move(moves, board)
 
         move_details = MoveDetails(self.player_id, move)
         if move == Move.RAISE:
-            raise_amount = self._get_raise_amount(last_raise_amount)
+            raise_amount = self._get_raise_amount(last_raise_amount, max_opponent_stack)
             assert raise_amount > 0
 
             self._stack -= (raise_amount + self._to_call)
@@ -46,6 +47,7 @@ class Player:
             self._cards = []
 
         self._last_move = move
+        self._chips_in_pot += move_details.call_amount + move_details.raise_amount
 
         return move_details
 
@@ -57,8 +59,9 @@ class Player:
         self._cards = []
         self._to_call = 0
         self._last_move = Move.NIL
+        self._chips_in_pot = 0
 
-    def _get_available_moves(self) -> List[Move]:
+    def _get_available_moves(self, max_opponent_stack:int) -> List[Move]:
         available_moves = []
 
         if self._to_call == 0:
@@ -66,7 +69,7 @@ class Player:
         else:
             available_moves.append(Move.CALL)
 
-        if self._stack > self._to_call:
+        if self._stack > self._to_call and max_opponent_stack > 0:
             available_moves.append(Move.RAISE)
 
         if self._to_call > 0:
@@ -78,13 +81,15 @@ class Player:
         random_move = random.choice(moves)
         return random_move
 
-    def _get_raise_amount(self, last_raise_amount:int) -> int:
+    def _get_raise_amount(self, last_raise_amount:int, max_opponent_stack:int) -> int:
         assert self._stack > self._to_call
 
         max_raise = self._stack - self._to_call
+        max_raise = min(max_raise, max_opponent_stack)
 
         last_raise_or_big_blind = max(last_raise_amount, BIG_BLIND)
         min_raise = min(last_raise_or_big_blind, self._stack - self._to_call)
+        min_raise = min(min_raise, max_opponent_stack)
 
         assert min_raise <= max_raise and min_raise > 0
 
@@ -92,12 +97,15 @@ class Player:
 
     def post_big_blind(self, big_blind: int) -> int:
         self._last_move = Move.RAISE
-        return self.safe_take_from_stack(big_blind)
+        amount = self.safe_take_from_stack(big_blind)
+        self._chips_in_pot += amount
+        return amount
 
     def post_small_blind(self, big_blind: int, small_blind: int) -> int:
         amount = self.safe_take_from_stack(small_blind)
         self.add_to_call(big_blind-small_blind)
         self._last_move = Move.RAISE
+        self._chips_in_pot += amount
         return amount
     
     def safe_take_from_stack(self, amount: int):
@@ -118,7 +126,7 @@ class Player:
     @property
     def stack(self) -> int:
         return self._stack
-    
+ 
     @stack.setter
     def stack(self, stack: int):
         self._stack = stack

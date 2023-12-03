@@ -3,7 +3,7 @@ from typing import List, Dict, Optional, Set
 from treys import Deck
 import random
 from .Player import Player
-from .types import Move, MoveDetails, SidePot
+from .types import Move, MoveDetails, Winner
 from typing import List
 from treys import Card, Evaluator
 from .pre_flop_rankings import PREFLOP_RANKINGS
@@ -16,17 +16,15 @@ class Dealer():
     _board: List[int]
     _last_raise: int
     _pot: int
+    _max_raise: int
 
     _evaluator = Evaluator()
-
-    _side_pots: Dict[int, SidePot]
 
     def __init__(self):
         self._deck = Deck()
         self._board = []
         self._last_raise = 0
         self._pot = 0
-        self._side_pots = {}
 
     def deal_player_cards(self, players:deque[Player]):
         for player in players:
@@ -59,49 +57,16 @@ class Dealer():
         assert amount >= 0
         self._pot += amount
 
-    def setup_side_pot(self, player: Player, players:deque[Player], move_details: MoveDetails):
-
-        # Check if we need to create a side pot for an opponent
-        if move_details.move == Move.RAISE:
-            for p in players:
-                if p.to_call >= move_details.raise_amount:
-                    # Don't create a side pot for players who have enough to call the raise
-                    continue
-                if p.player_id in self._side_pots:
-                    # Don't create a side pot for players who already have one
-                    continue
-
-                print(f"Creating side pot for player {p.player_id} after {player.player_id} raised") 
-                self._side_pots[p.player_id] = SidePot(
-                    pot=self._pot - move_details.raise_amount+ p.to_call,
-                    contributors={player.player_id},
-                    contribution_size=p.to_call
-                )
-                print(self._side_pots[p.player_id])
-
-        # Check if we need to add to an existing side pot after a call
-        elif move_details.move == Move.CALL:
-            all_players = [player] + list(players)
-            for p in all_players:
-                side_pot = self._side_pots.get(p.player_id)
-                if side_pot and p.player_id not in side_pot.contributors:
-                    side_pot.contributors.add(player.player_id)
-                    side_pot.pot += side_pot.contribution_size
-
-        elif move_details.move == Move.FOLD:
-            if player.player_id in self._side_pots:
-                del self._side_pots[player.player_id]
-
     def determine_winners(self, players: List[Player]) -> List[Player]:
         potential_winners = [player for player in players if player.last_move != Move.FOLD]
 
-        if len(potential_winners) == 1:
+        if len(potential_winners) <= 1:
             return potential_winners
 
-        best_rank = np.inf
         ranks:Dict[int, float] = {}
+        best_rank = np.inf
         for player in potential_winners:
-            rank = self.eval_hand(player.cards, self._board)
+            rank = self._eval_hand(player.cards, self._board)
             ranks[player.player_id] = rank
             if rank < best_rank:
                 best_rank = rank
@@ -117,7 +82,34 @@ class Dealer():
 
         return winners
 
-    def eval_hand(self, hand:List[int], board:List[int]) -> float:
+    def distribute_pot(self, players: List[Player]) -> List[Winner]:
+        p = [player for player in players if player._chips_in_pot > 0]
+        hand_winnners:Dict[int,Winner] = {}
+        while len(p) > 0:
+            min_chips = min([player._chips_in_pot for player in p])
+            for player in p:
+                player._chips_in_pot -= min_chips
+                self._pot -= min_chips
+            winners = self.determine_winners(p)
+
+            split_pot = len(p)*min_chips // len(winners)
+            remainder = len(p)*min_chips % len(winners)
+            remainder_winner = random.choice(winners).player_id
+            for winner in winners:
+                
+                win_amount = split_pot + (remainder if winner.player_id == remainder_winner else 0)
+                winner.stack += win_amount
+                if winner.player_id in hand_winnners:
+                    hand_winnners[winner.player_id].win_amount += win_amount
+                    hand_winnners[winner.player_id].end_stack = winner.stack
+                else:
+                    hand_winnners[winner.player_id] = Winner(winner.player_id, win_amount, winner.stack)
+ 
+            p = [player for player in p if player._chips_in_pot > 0] 
+
+        return list(hand_winnners.values())
+
+    def _eval_hand(self, hand:List[int], board:List[int]) -> float:
         assert len(hand) == 2
         assert len(board)>= 0 and len(board) <= 5
         if len(board) == 0:
@@ -135,17 +127,13 @@ class Dealer():
             value = self._evaluator.evaluate(hand, board)
             return self._evaluator.get_five_card_rank_percentage(value)
 
-    def distribute_pot(self, winners: List[Player]):
-        assert len(winners) > 0
-        pot_split = self._pot // len(winners)
-        remainder = self._pot - pot_split * len(winners)
-        for winner in winners:
-            winner.stack += pot_split
-        remainder_winner = random.choice(winners)
-        remainder_winner.stack += remainder
-
     def get_next_player_turn(self, players:deque[Player]) -> Player:
         return players.popleft()
+
+    def max_opponent_stack(self, players:deque[Player]) -> int:
+        if len(players) == 0:
+            return 0
+        return max([player.stack for player in players])
 
     def setup_for_next_round(self, player_queue:deque[Player], players:List[Player]):
         players_in_queue:Set[int] = {player.player_id for player in player_queue}
