@@ -1,3 +1,4 @@
+from model.AIPlayer import AIPlayer
 from .Dealer import Dealer
 from .Player import Player
 import random
