@@ -1,68 +1,119 @@
 package main
 
 import (
-	"fmt"
 	"math"
-	"time"
+	"math/rand"
+	"sync"
 
 	"github.com/chehsunliu/poker"
 )
 
 const SIMULATIONS = 10000
 const N_OPPONENTS = 6
+const N_THREADS = 10
 
-var start_hand = []string{"Kc", "4h"}
-var start_board = []string{"2c", "3c", "4c"}
+var wins int
 
-func main(){
-	t0 := time.Now()
-	simulate()
-	fmt.Println(time.Since(t0))
+var wg sync.WaitGroup
+var m = sync.Mutex{}
+
+func Simulate(params *SimulationParams) float64{
+	wins = 0
+
+	wg.Add(N_THREADS)
+	for i:=0; i<N_THREADS; i++{
+		go simulate(SIMULATIONS/N_THREADS, params)
+	}
+	wg.Wait()
+
+    	chances := math.Pow(float64(wins)/ float64((SIMULATIONS/N_THREADS)*N_THREADS), float64(params.Opponents))
+	return chances
 }
 
-func simulate() {
+func simulate(simulations int, params *SimulationParams) {
+	defer wg.Done()
+
+	var deck [52]poker.Card = makeDeck()
 
 	hand := make([]poker.Card, 2, 7)
 	opponent := make([]poker.Card, 2, 7)
-	board := make([]poker.Card, 5)
-	drawnCards := make([]poker.Card, 9)
-	nDrawnCards := 0
+	board := make([]poker.Card, 5, 7)
+	drawnCards := make(map[int]bool)
 
-	deck := poker.NewDeck()
-	for i, card:=range start_hand {
+	for i, card:=range params.Hand {
 		hand[i] = poker.NewCard(card)
-		drawnCards[nDrawnCards] = hand[i]
-		nDrawnCards++
 	}
-	for i, card:=range start_board {
+	for i, card:=range params.StartBoard {
 		board[i] = poker.NewCard(card)
-		drawnCards[nDrawnCards] = board[i]
-		nDrawnCards++
 	}
+	addDrawnCards(drawnCards, hand, board, deck)
+	
+	variableDrawnCards := make([]int, 5-len(params.StartBoard)+2)
+	n := 0
+	var ws int
+	for i:=0; i<simulations; i++{
+		var cardIndex int
 
-	var wins int = 0
-	var played int = 0
-	for i:=0; i<SIMULATIONS; i++{
-
-		for j:=len(start_board); j<5; j++ {
-			board[j] = drawCard(drawnCards, nDrawnCards, deck)
-			drawnCards[nDrawnCards] = board[j]
-			nDrawnCards++
+		for j:=len(params.StartBoard); j<5; j++ {
+			board[j], cardIndex = drawCard(deck, drawnCards)
+			variableDrawnCards[n] = cardIndex
+			n++
 		}
 
 		for j:=0; j<2; j++ {	
-			opponent[j] = drawCard(drawnCards, nDrawnCards, deck)
-			drawnCards[nDrawnCards] = opponent[j]
-			nDrawnCards++	
+			opponent[j], cardIndex = drawCard(deck, drawnCards)
+			variableDrawnCards[n] = cardIndex
+			n++
 		}
 
-		wins += isBestHand(hand, opponent, board)
-		played++
+		ws += isBestHand(hand, opponent, board)
 
-		nDrawnCards = 2 + len(start_board)
+		n = 0
+		for _, index := range variableDrawnCards{
+			delete(drawnCards, index)
+		} 
+
 	}
-	chances := math.Pow(float64(wins)/float64(played), float64(N_OPPONENTS))
-	fmt.Println(chances)	
+
+	m.Lock()
+	wins += ws
+	m.Unlock()
+}
+
+func makeDeck() [52]poker.Card {
+	deck := [52]poker.Card{}
+	cards := poker.NewDeck()
+	for i:=0; i<len(deck); i++ {
+		deck[i] = cards.Draw(1)[0]
+	}
+	return deck
+}
+
+func drawCard(deck [52]poker.Card, drawnCards map[int]bool) (poker.Card, int) {
+	for {	
+		index := rand.Intn(len(deck))
+		if _, ok := drawnCards[index]; !ok {
+			drawnCards[index] = true
+			return deck[index], index
+		}
+	}
+}
+
+func addDrawnCards(drawnCards map[int]bool, hand []poker.Card, board []poker.Card, deck [52]poker.Card){
+	toAdd := make([]poker.Card, len(hand), len(hand) + len(board))
+	copy(toAdd, hand)
+	toAdd = append(toAdd, board...)
+
+	indexes := make(map[string]int)
+
+	for i, card := range deck{
+		indexes[card.String()] = i
+	}
+
+	for _, card := range toAdd {
+		index := indexes[card.String()]
+		drawnCards[index] = true
+	}
 }
 
 func isBestHand(hand []poker.Card, opponent []poker.Card, board []poker.Card) int{
@@ -79,28 +130,3 @@ func isBestHand(hand []poker.Card, opponent []poker.Card, board []poker.Card) in
 	}
 }
 
-func drawCard(drawnCards []poker.Card, nDrawnCards int, deck *poker.Deck) poker.Card {
-	var card poker.Card
-
-	validCard := false
-
-	drawnCardsMap := make(map[int32]int8)
-	for i:=0; i<nDrawnCards; i++ {
-		card = drawnCards[i]
-		drawnCardsMap[card.Rank()] = 1
-	}
-
-	for !validCard {
-		if deck.Empty() {
-			deck = poker.NewDeck()
-		}
-
-		card = deck.Draw(1)[0]
-
-		if _, ok := drawnCardsMap[card.Rank()]; !ok {
-			validCard = true
-		}
-	}
-
-	return card
-}
