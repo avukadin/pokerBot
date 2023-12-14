@@ -10,7 +10,7 @@ import (
 
 const SIMULATIONS = 10000
 const N_OPPONENTS = 6
-const N_THREADS = 10
+const N_THREADS = 4
 
 var wins int
 
