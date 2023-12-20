@@ -1,6 +1,6 @@
 from typing import List, Dict
 from .Player import Player
-from .types import MoveDetails, Winner
+from .types import MoveDetails, Turn, Winner
 from .types import Move
 from treys import Card, Evaluator
 from .params import PRINTER
@@ -18,7 +18,7 @@ def print_game_start(game_number:int, n_players:int):
     if not PRINTER:
         return
     print("=========================")
-    print(f"        Game {game_number+1}")
+    print(f"        Game {game_number}")
     print(f"      Players: {n_players}")
     print("=========================")
 
@@ -35,12 +35,12 @@ def print_player_move(player:Player, move:MoveDetails, pot:int, player_hand:List
         call_str = f" and calls {move.call_amount}" if move.call_amount > 0 else ""
         print(f"{player_str} {move.raise_amount}{call_str}. The pot is now {pot}. Their stack is now {player.stack}.")
 
-def print_round(round_num:int, board:List[int]):
+def print_round(turn:Turn, board:List[int]):
     if not PRINTER:
         return
     print(f"=========================")
-    print(f" {round_names[round_num]}")
-    if round_num > 0:
+    print(f" {round_names[turn.value]}")
+    if turn != Turn.PREFLOP:
         Card.print_pretty_cards(board)
     print(f"=========================")
 

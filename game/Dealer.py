@@ -1,14 +1,14 @@
 from collections import deque
-from typing import List, Dict, Optional, Set
-from treys import Deck
 import random
-from .Player import Player
-from .types import Move, MoveDetails, Winner
-from typing import List
-from treys import Card, Evaluator
-from .pre_flop_rankings import PREFLOP_RANKINGS
+from typing import Dict, List, Optional, Set
+
 import numpy as np
-from .params import BIG_BLIND, SMALL_BLIND
+from treys import Card, Deck, Evaluator
+
+from game.Player import Player
+from game.params import BIG_BLIND, SMALL_BLIND
+from game.pre_flop_rankings import PREFLOP_RANKINGS
+from game.types import Move, MoveDetails, Turn, Winner
 
 
 class Dealer():
@@ -19,12 +19,14 @@ class Dealer():
     _max_raise: int
 
     _evaluator = Evaluator()
+    _turn_queue: deque[Turn]
 
     def __init__(self):
         self._deck = Deck()
         self._board = []
         self._last_raise = 0
         self._pot = 0
+        self._turn_queue = deque([Turn.PREFLOP, Turn.FLOP, Turn.TURN, Turn.RIVER])
 
     def deal_player_cards(self, players:deque[Player]):
         for player in players:
@@ -127,9 +129,6 @@ class Dealer():
             value = self._evaluator.evaluate(hand, board)
             return self._evaluator.get_five_card_rank_percentage(value)
 
-    def get_next_player_turn(self, players:deque[Player]) -> Player:
-        return players.popleft()
-
     def max_opponent_stack(self, players:deque[Player]) -> int:
         if len(players) == 0:
             return 0
@@ -142,7 +141,13 @@ class Dealer():
                 player.set_new_round_state()
                 if player.player_id not in players_in_queue:
                     player_queue.append(player)
+        self._turn_queue.popleft()
         self._last_raise = 0
+
+    def get_next_turn(self) -> Optional[Turn]:
+        if len(self._turn_queue) == 0:
+            return None
+        return self._turn_queue[0]
 
     def update_after_raise(self, player_queue:deque[Player], players:List[Player], move_details:MoveDetails):
         players_in_queue:Set[int] = {player.player_id for player in player_queue}

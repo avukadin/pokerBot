@@ -37,7 +37,7 @@ func simulate(simulations int, params *SimulationParams) {
 
 	hand := make([]poker.Card, 2, 7)
 	opponent := make([]poker.Card, 2, 7)
-	board := make([]poker.Card, 5, 7)
+	board := make([]poker.Card, params.MaxBoardSize, 7)
 	drawnCards := make(map[int]bool)
 
 	for i, card:=range params.Hand {
@@ -48,13 +48,13 @@ func simulate(simulations int, params *SimulationParams) {
 	}
 	addDrawnCards(drawnCards, hand, board, deck)
 	
-	variableDrawnCards := make([]int, 5-len(params.StartBoard)+2)
+	variableDrawnCards := make([]int, params.MaxBoardSize-len(params.StartBoard)+2)
 	n := 0
 	var ws int
 	for i:=0; i<simulations; i++{
 		var cardIndex int
 
-		for j:=len(params.StartBoard); j<5; j++ {
+		for j:=len(params.StartBoard); j<params.MaxBoardSize; j++ {
 			board[j], cardIndex = drawCard(deck, drawnCards)
 			variableDrawnCards[n] = cardIndex
 			n++

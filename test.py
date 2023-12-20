@@ -1,13 +1,9 @@
-from poker_game.conductor import play
-from time import time
-from poker_game.params import MIN_PLAYERS, MAX_PLAYERS, NUM_GAMES
-
+from game.PokerEnv import PokerEnv
+from game.train import train
 if __name__ == '__main__':  
-    # start = time()
-    # play(MIN_PLAYERS, MAX_PLAYERS, NUM_GAMES)
-    # end = time()
-    #
-    # # Print total seconds passed
-    # print("Total time taken in seconds: ", end - start)
-    from model.TestEnv import TestEnv 
-
+    env = PokerEnv()
+    env.reset()
+    while True:
+        _,_,done,_,_ = env.step(0)
+        if done:
+            env.reset()

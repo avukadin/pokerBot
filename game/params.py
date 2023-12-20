@@ -1,0 +1,17 @@
+from game.types import Modes
+
+MODE = Modes.TRAIN
+
+START_STACK = 100
+
+SMALL_BLIND = 1
+BIG_BLIND = 2
+
+MIN_PLAYERS = 2
+MAX_PLAYERS = 8
+
+NUM_GAMES = 10
+
+OPONENT_HISTORY = 20
+PRINTER = True
+

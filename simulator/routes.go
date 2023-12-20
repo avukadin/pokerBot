@@ -13,11 +13,12 @@ type SimulationParams struct {
 	StartBoard []string
 	Hand []string
 	Opponents int
+	MaxBoardSize int
 }
 
 func Handler(r *chi.Mux) {
 	r.Use(chimiddle.StripSlashes)
 	r.Route("/", func(router chi.Router) {
-		router.Get("/simulate", RunSimulation)
+		router.Post("/simulate", RunSimulation)
 	})
 }
