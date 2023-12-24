@@ -21,12 +21,15 @@ class Dealer():
     _evaluator = Evaluator()
     _turn_queue: deque[Turn]
 
+    _last_delt_turn: Optional[Turn]
+
     def __init__(self):
         self._deck = Deck()
         self._board = []
         self._last_raise = 0
         self._pot = 0
         self._turn_queue = deque([Turn.PREFLOP, Turn.FLOP, Turn.TURN, Turn.RIVER])
+        self._last_delt_turn = None
 
     def deal_player_cards(self, players:deque[Player]):
         for player in players:
@@ -47,13 +50,21 @@ class Dealer():
                 continue
             players[i].add_to_call(BIG_BLIND)
 
-    def deal_board(self):
-        assert len(self._board) in [0, 3, 4]
+    def deal_board(self, turn:Turn):
+        assert len(self._board) in [0, 3, 4, 5]
 
-        if len(self._board) == 0:
+        if turn == Turn.FLOP and len(self.board) == 0:
             self._board += self._deck.draw(3)
-        else:
+        elif turn == Turn.TURN and len(self.board) == 3:
             self._board += self._deck.draw(1)
+        elif turn == Turn.RIVER and len(self.board) == 4:
+            self._board += self._deck.draw(1)
+
+    def is_start_of_round(self, turn:Turn) -> bool:
+        if turn != self._last_delt_turn:
+            self._last_delt_turn = turn
+            return True
+        return False
 
     def add_to_pot(self, amount: int):
         assert amount >= 0
@@ -129,7 +140,7 @@ class Dealer():
             value = self._evaluator.evaluate(hand, board)
             return self._evaluator.get_five_card_rank_percentage(value)
 
-    def max_opponent_stack(self, players:deque[Player]) -> int:
+    def max_opponent_stack(self, players:List[Player]) -> int:
         if len(players) == 0:
             return 0
         return max([player.stack for player in players])
@@ -143,6 +154,7 @@ class Dealer():
                     player_queue.append(player)
         self._turn_queue.popleft()
         self._last_raise = 0
+        self._last_delt_turn = None
 
     def get_next_turn(self) -> Optional[Turn]:
         if len(self._turn_queue) == 0:

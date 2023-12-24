@@ -8,10 +8,8 @@ class AITrainer(Player):
     chosen_action:int
     chosen_raise_amount: int
 
-    type = Players.AI_TRAINER
-
     def __init__(self, player_id, stack):
-        super().__init__(player_id, stack)
+        super().__init__(player_id, stack, Players.AI_TRAINER)
 
     def make_move(self, last_raise_amount:int, max_opponent_stack:int, board:List[int], **kwargs) -> MoveDetails:
         self.chosen_action = kwargs['action']
@@ -25,6 +23,13 @@ class AITrainer(Player):
                 move_chosen = Move.FOLD
             elif Move.CHECK in moves:
                 move_chosen = Move.CHECK
+            else:
+                raise Exception("Invalid action chosen")
+        elif action_chosen == Actions.CHECK.value:
+            if Move.CHECK in moves:
+                move_chosen = Move.CHECK
+            elif Move.FOLD in moves:
+                move_chosen = Move.FOLD
             else:
                 raise Exception("Invalid action chosen")
         elif action_chosen == Actions.CALL.value:

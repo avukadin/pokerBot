@@ -19,11 +19,11 @@ class Actions(Enum):
 
 # Player Moves
 class Move(Enum):
-    FOLD = "fold"
-    CHECK = "check"
-    CALL = "call"
-    RAISE = "raise"
-    NIL = "nil"
+    FOLD = 0
+    CHECK = 1
+    CALL = 2
+    RAISE = 3
+    NIL = 4
 
 class Turn(Enum):
     PREFLOP = 0

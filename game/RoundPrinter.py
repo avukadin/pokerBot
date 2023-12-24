@@ -12,6 +12,13 @@ round_names = {
     3: "River"
 }
 
+move_names = {
+    Move.FOLD: "Fold",
+    Move.CHECK: "Check",
+    Move.CALL: "Call",
+    Move.RAISE: "Raise"
+}
+
 eval = Evaluator()
 
 def print_game_start(game_number:int, n_players:int):
@@ -26,7 +33,7 @@ def print_player_move(player:Player, move:MoveDetails, pot:int, player_hand:List
     if not PRINTER:
         return
     player_hand_str = Card.ints_to_pretty_str(player_hand)
-    player_str = f"Player {player.player_id} with{player_hand_str}{move.move.value}s"
+    player_str = f"Player {player.player_id} with{player_hand_str}{move_names[move.move]}s"
     if move.move in [Move.FOLD, Move.CHECK]:
         print(f"{player_str} Their stack is {player.stack}.")
     elif move.move == Move.CALL:

@@ -2,10 +2,11 @@ import random
 from typing import List, Tuple
 
 from game.params import BIG_BLIND
-from game.types import Move, MoveDetails
+from game.types import Move, MoveDetails, Players
 
 class Player:
     player_id: int
+    type: Players
 
     _stack: int
     _chips_in_pot: int = 0
@@ -15,8 +16,9 @@ class Player:
     _is_big_blind: bool = False
     _is_small_blind: bool = False
 
-    def __init__(self, player_id:int, stack: int):
+    def __init__(self, player_id:int, stack: int, type: Players):
         self.player_id = player_id
+        self.type = type
         self._stack = stack
 
     def make_move(self, last_raise_amount:int, max_opponent_stack:int, board:List[int], **kwargs) -> MoveDetails:
