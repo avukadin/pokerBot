@@ -9,6 +9,6 @@ class RandomPlayer(Player):
     def __init__(self, player_id, stack):
         super().__init__(player_id, stack, Players.RANDOM)
 
-    def _select_move(self, moves):
+    def _select_move(self, moves, board):
         random_move = random.choice(moves)
         return random_move

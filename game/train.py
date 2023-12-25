@@ -2,13 +2,18 @@ from typing import List
 from stable_baselines3.common.env_checker import check_env
 from game.PokerEnv import PokerEnv
 
-from stable_baselines3 import PPO
+from stable_baselines3 import PPO, A2C
 
 from stable_baselines3.common.callbacks import BaseCallback
+from stable_baselines3.common.logger import configure
+
+tmp_path = "./tmp/sb3_log/"
+# set up logger
+new_logger = configure(tmp_path, ["stdout", "csv", "tensorboard"])
 
 
 env = PokerEnv()
-# check_env(env)
+check_env(env)
 
 # class CustomMetricCallback(BaseCallback):
 #     is_win:List[int] = []
@@ -40,5 +45,6 @@ def train():
 
     # Create the callback instance
     # custom_callback = CustomMetricCallback()
-    model = PPO("MlpPolicy", env, verbose=0,tensorboard_log="./logs/")
+    model = A2C("MlpPolicy", env, verbose=1)
+    model.set_logger(new_logger)
     model.learn(total_timesteps=100000)

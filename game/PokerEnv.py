@@ -10,6 +10,8 @@ from game.AITrainer import AITrainer
 from game.Dealer import Dealer
 from game.Player import Player
 from game.RandomPlayer import RandomPlayer
+from game.OddsPlayer import OddsPlayer
+from game.hand_strength import get_hand_strength
 from game.RoundPrinter import (
     print_game_start,
     print_player_move,
@@ -90,7 +92,7 @@ class PokerEnv(gym.Env):
     def __init__(self):
         super(PokerEnv, self).__init__()
 
-        self.action_space = spaces.Discrete(13) #[Fold, Call/Check, Raise 1/10, Raise 2/10, ... Raise 10/10]
+        self.action_space = spaces.Discrete(13) #[Fold, Check, Call, Raise 1/10, Raise 2/10, ... Raise 10/10]
         self.observation_space = self._get_observation_space()
 
     def step(self, action):
@@ -104,7 +106,7 @@ class PokerEnv(gym.Env):
         models = [PreActionState, OpponentModel, MoveHistory]
         for model in models:
             self._get_limits(model)
-        return spaces.Box(low=np.array(self.lower_limits), high=np.array(self.upper_limits), dtype=np.float32)
+        return spaces.Box(low=np.array(self.lower_limits), high=np.array(self.upper_limits), dtype=np.float64)
     
     def _get_limits(self, model):
         fields = list(model.model_fields.keys())
@@ -176,7 +178,7 @@ class PokerEnv(gym.Env):
         if reward != 0.0:
             self.rewards.append(reward)
             self.rewards = self.rewards[-100:]
-            print("avg reward: ", sum(self.rewards)/len(self.rewards))
+            # print("avg reward: ", sum(self.rewards)/len(self.rewards))
         return obs, reward, True
     
     def get_stack(self, players:List[Player], player_id:int) -> int:
@@ -191,13 +193,13 @@ class PokerEnv(gym.Env):
         n_opponents = len(opponents) 
         turns = [i for i in range(4) if i>=turn.value]
         if 0 in turns:
-            pre_action_state.pre_flop_strength = self._get_hand_strength(player.cards, board, n_opponents, 0)
+            pre_action_state.pre_flop_strength = get_hand_strength(player.cards, board, n_opponents, 0)
         if 1 in turns:
-            pre_action_state.flop_strength = self._get_hand_strength(player.cards, board, n_opponents, 3)
+            pre_action_state.flop_strength = get_hand_strength(player.cards, board, n_opponents, 3)
         if 2 in turns:
-            pre_action_state.turn_strength = self._get_hand_strength(player.cards, board, n_opponents, 4)
+            pre_action_state.turn_strength = get_hand_strength(player.cards, board, n_opponents, 4)
         if 3 in turns:
-            pre_action_state.river_strength = self._get_hand_strength(player.cards, board, n_opponents, 5)
+            pre_action_state.river_strength = get_hand_strength(player.cards, board, n_opponents, 5)
         pre_action_state.turn[turn.value] = 1
         pre_action_state.stack = player.stack
         pre_action_state.pot = self.dealer.pot
@@ -221,7 +223,7 @@ class PokerEnv(gym.Env):
         # Pop left all fields
         for field in fields:
             getattr(self.move_history, field).popleft()
-        move = [0 if move_history.move != Move(i) else 1 for i in range(4)]
+        move = [1 if move_history.move == Move(i) else 0 for i in range(4)]
         player_id = [1 if player.player_id == i else 0 for i in range(MAX_PLAYERS)]
         
         self.move_history.player_id.append(player_id)
@@ -241,49 +243,26 @@ class PokerEnv(gym.Env):
             player_id = [1 if player.player_id == i else 0 for i in range(MAX_PLAYERS)]
             self.opponent_model.player_id.append(player_id)
 
-            self.opponent_model.preflop_strength.append(self._get_hand_strength(player.cards, [], self.players_at_turn[0]))
-            self.opponent_model.flop_strength.append(self._get_hand_strength(player.cards, board[:3], self.players_at_turn[1]))
-            self.opponent_model.turn_strength.append(self._get_hand_strength(player.cards, board[:4], self.players_at_turn[2]))
-            self.opponent_model.river_strength.append(self._get_hand_strength(player.cards, board[:5], self.players_at_turn[3]))
-
-    def _get_hand_strength(self, cards:List[int], board:List[int], opponents:int, max_board_size:int=5) -> float:
-        if max_board_size == 0:
-            return self._get_preflop_strength(cards)
-        hand = [Card.int_to_str(card) for card in cards]
-        board_cards = [Card.int_to_str(card) for card in board]
-        payload = {
-            "hand":hand,
-            "opponents": opponents,
-            "startBoard":board_cards,
-            "maxBoardSize":max_board_size
-        }
-            
-        response = requests.post("http://localhost:8000/simulate", json=payload)
-        return response.json()["winRate"]
-
-    def _get_preflop_strength(self, cards:List[int]) -> float:
-        cards_ordered = sorted(cards, reverse=True)
-        hand = [Card.int_to_str(card) for card in cards_ordered]
-        hand_str: str = hand[0][0]+hand[1][0]
-        if hand[0][1] == hand[1][1]:
-            hand_str += "s"
-        return 1 - PREFLOP_RANKINGS[hand_str]
+            self.opponent_model.preflop_strength.append(get_hand_strength(player.cards, [], self.players_at_turn[0]))
+            self.opponent_model.flop_strength.append(get_hand_strength(player.cards, board[:3], self.players_at_turn[1]))
+            self.opponent_model.turn_strength.append(get_hand_strength(player.cards, board[:4], self.players_at_turn[2]))
+            self.opponent_model.river_strength.append(get_hand_strength(player.cards, board[:5], self.players_at_turn[3]))
 
     def _get_flattened_observations(self, pre_action_state:PreActionState) -> np.ndarray:
         # Flattening each model instance
-        pre_action_state_flat = list(self.flatten(pre_action_state.dict().values()))
-        opponent_model_flat = list(self.flatten(self.opponent_model.dict().values()))
-        move_history_flat = list(self.flatten(self.move_history.dict().values()))
+        pre_action_state_flat = list(self._flatten(pre_action_state.dict().values()))
+        opponent_model_flat = list(self._flatten(self.opponent_model.dict().values()))
+        move_history_flat = list(self._flatten(self.move_history.dict().values()))
 
         # Concatenating all flattened lists and converting to a NumPy array
         combined_flat_array = np.array(pre_action_state_flat + opponent_model_flat + move_history_flat)
 
         return combined_flat_array
 
-    def flatten(self, container):
+    def _flatten(self, container):
         for i in container:
             if isinstance(i, (list, deque)):
-                for j in self.flatten(i):
+                for j in self._flatten(i):
                     yield j
             else:
                 yield i

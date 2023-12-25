@@ -39,6 +39,7 @@ class Modes(Enum):
 class Players(Enum):
     RANDOM = 0
     AI_TRAINER = 1
+    ODDS_PLAYER = 2
 
 @dataclass
 class MoveDetails:

@@ -24,7 +24,7 @@ class Player:
     def make_move(self, last_raise_amount:int, max_opponent_stack:int, board:List[int], **kwargs) -> MoveDetails:
 
         moves = self._get_available_moves(max_opponent_stack)
-        move = self._select_move(moves)
+        move = self._select_move(moves, board)
 
         move_details = MoveDetails(self.player_id, move)
         if move == Move.RAISE:
@@ -81,7 +81,7 @@ class Player:
 
         return available_moves
 
-    def _select_move(self, moves: List[Move]) -> Move:
+    def _select_move(self, moves: List[Move], board:List[int]) -> Move:
         raise NotImplementedError
 
     def _get_raise_range(self, last_raise_amount:int, max_opponent_stack:int) -> Tuple[int, int]:

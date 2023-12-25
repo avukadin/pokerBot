@@ -8,7 +8,7 @@ import (
 	"github.com/chehsunliu/poker"
 )
 
-const SIMULATIONS = 10000
+const SIMULATIONS = 100
 const N_OPPONENTS = 6
 const N_THREADS = 4
 

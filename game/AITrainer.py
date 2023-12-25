@@ -15,7 +15,7 @@ class AITrainer(Player):
         self.chosen_action = kwargs['action']
         return super().make_move(last_raise_amount, max_opponent_stack, board, **kwargs)
 
-    def _select_move(self, moves:List[Move]) -> Move:
+    def _select_move(self, moves:List[Move], board:List[int]) -> Move:
         action_chosen = self.chosen_action
         move_chosen:Move
         if action_chosen == Actions.FOLD.value:
@@ -48,7 +48,7 @@ class AITrainer(Player):
                 move_chosen = Move.CHECK
             else:
                 raise Exception("Invalid action chosen")
-            self.chosen_raise_amount = int(round(float(self._stack)*(float(action_chosen)-1)/10,0))
+            self.chosen_raise_amount = int(round(float(self._stack)*(float(action_chosen)-2)/10,0))
 
         return move_chosen
 
