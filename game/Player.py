@@ -1,8 +1,7 @@
-import random
-from typing import List, Tuple
-
+from typing import List
 from game.params import BIG_BLIND
 from game.types import Move, MoveDetails, Players
+import random
 
 class Player:
     player_id: int
@@ -16,20 +15,18 @@ class Player:
     _is_big_blind: bool = False
     _is_small_blind: bool = False
 
-    def __init__(self, player_id:int, stack: int, type: Players):
+    def __init__(self, player_id:int, stack: int):
         self.player_id = player_id
-        self.type = type
         self._stack = stack
 
-    def make_move(self, last_raise_amount:int, max_opponent_stack:int, board:List[int], **kwargs) -> MoveDetails:
+    def make_move(self, last_raise_amount:int, max_opponent_stack:int, board:List[int]) -> MoveDetails:
 
         moves = self._get_available_moves(max_opponent_stack)
         move = self._select_move(moves, board)
 
         move_details = MoveDetails(self.player_id, move)
         if move == Move.RAISE:
-            min_raise, max_raise = self._get_raise_range(last_raise_amount, max_opponent_stack)
-            raise_amount = self._get_raise_amount(min_raise, max_raise)
+            raise_amount = self._get_raise_amount(last_raise_amount, max_opponent_stack)
             assert raise_amount > 0
 
             self._stack -= (raise_amount + self._to_call)
@@ -81,25 +78,11 @@ class Player:
 
         return available_moves
 
-    def _select_move(self, moves: List[Move], board:List[int]) -> Move:
+    def _select_move(self, valid_moves: List[Move], board:List[int], **kwargs) -> Move:
         raise NotImplementedError
 
-    def _get_raise_range(self, last_raise_amount:int, max_opponent_stack:int) -> Tuple[int, int]:
-        assert self._stack > self._to_call
-
-        max_raise = self._stack - self._to_call
-        max_raise = min(max_raise, max_opponent_stack)
-
-        last_raise_or_big_blind = max(last_raise_amount, BIG_BLIND)
-        min_raise = min(last_raise_or_big_blind, self._stack - self._to_call)
-        min_raise = min(min_raise, max_opponent_stack)
-
-        assert min_raise <= max_raise and min_raise > 0
-        return min_raise, max_raise
-
-    def _get_raise_amount(self, min_raise:int, max_raise:int) -> int:
-        raise_amount = random.randint(min_raise, max_raise)
-        return raise_amount
+    def _get_raise_amount(self, last_raise_amount:int, max_opponent_stack:int, **kwargs) -> int:
+        raise NotImplementedError
 
     def post_big_blind(self, big_blind: int) -> int:
         self._last_move = Move.RAISE

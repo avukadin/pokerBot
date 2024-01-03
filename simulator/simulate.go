@@ -8,8 +8,7 @@ import (
 	"github.com/chehsunliu/poker"
 )
 
-const SIMULATIONS = 100
-const N_OPPONENTS = 6
+const SIMULATIONS = 5000
 const N_THREADS = 4
 
 var wins int

@@ -1,19 +1,31 @@
-
-import random
-from typing import List
 from game.Player import Player
 from game.types import Move, Players
+from typing import List
+from keras.models import load_model
+import numpy as np
+import random
 from game.params import BIG_BLIND
+from ml.params import HS_MODEL_PATH, MOVE_MODEL_PATH
 
-class RandomPlayer(Player):
 
+class AIPlayer(Player):
     def __init__(self, player_id, stack):
-        self.type = Players.RANDOM
+        self.type = Players.AI
+        print("Loading models...")
+        self.hs_model = load_model(HS_MODEL_PATH)
+        self.move_model = load_model(MOVE_MODEL_PATH)
+        print("Done")
         super().__init__(player_id, stack)
 
-    def _select_move(self, valid_moves:List[Move], board:List[int]) -> Move:
-        random_move = random.choice(valid_moves)
-        return random_move
+    def _select_move(self, valid_moves:List[Move], board:List[int], **kwargs) -> Move:
+
+        X = np.array([[0]*330])
+        move_probs = self.move_model.predict(X, verbose=0)
+        likely_move = np.argmax(move_probs)
+        move = Move(likely_move)
+        if move not in valid_moves:
+            move = random.choice(valid_moves)
+        return move
 
     def _get_raise_amount(self, last_raise_amount:int, max_opponent_stack:int) -> int:
         assert self._stack > self._to_call
